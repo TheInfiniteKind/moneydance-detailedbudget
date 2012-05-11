@@ -20,6 +20,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.swing.WindowConstants;
 import javax.swing.border.EmptyBorder;
 
 import com.moneydance.apps.md.model.Account;
@@ -68,7 +69,7 @@ public class AccountListWindow
     p.add(closeButton, AwtUtil.getConstraints(1,3,1,0,1,1,false,true));
     getContentPane().add(p);
 
-    setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+    setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
     enableEvents(WindowEvent.WINDOW_CLOSING);
     closeButton.addActionListener(this);
     clearButton.addActionListener(this);
@@ -100,12 +101,11 @@ public class AccountListWindow
     }
   }
 
-  public final void processEvent(AWTEvent evt) {
+  @Override
+public final void processEvent(AWTEvent evt) {
     if(evt.getID()==WindowEvent.WINDOW_CLOSING) {
       extension.closeConsole();
       return;
-    }
-    if(evt.getID()==WindowEvent.WINDOW_OPENED) {
     }
     super.processEvent(evt);
   }
@@ -114,14 +114,16 @@ public class AccountListWindow
     extends OutputStream
     implements Runnable
   {    
-    public void write(int b)
+    @Override
+	public void write(int b)
       throws IOException
     {
       accountListArea.append(String.valueOf((char)b));
       repaint();
     }
 
-    public void write(byte[] b)
+    @Override
+	public void write(byte[] b)
       throws IOException
     {
       accountListArea.append(new String(b));

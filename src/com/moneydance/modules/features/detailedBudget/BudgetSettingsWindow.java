@@ -17,6 +17,7 @@ import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.WindowConstants;
 import javax.swing.border.EmptyBorder;
 
 import com.moneydance.apps.md.model.BudgetList;
@@ -47,11 +48,6 @@ public class BudgetSettingsWindow
   private JButton generateButton;
   private JButton closeButton;
   
-//  private JTextArea accountListArea;
-//  private JButton clearButton;
-//  private JButton closeButton;
-//  private JTextField inputArea;
-
   public BudgetSettingsWindow(Main extension) {
     super("Budget Settings");
     this.extension = extension;
@@ -64,7 +60,7 @@ public class BudgetSettingsWindow
     // Budget Names
     JLabel lblBudgetName = new JLabel("Budget:");
     p.add(lblBudgetName,AwtUtil.getConstraints(0, row, 1, 1, 1, 1, false, false, GridBagConstraints.EAST,3));
-    List budgetList = new ArrayList();
+    List<String> budgetList = new ArrayList<String>();
     budgetList.add("ALL");
     
     BudgetList bList = extension.getUnprotectedContext().getRootAccount().getBudgetList();
@@ -179,12 +175,8 @@ public class BudgetSettingsWindow
 
     getContentPane().add(p);
 
-    setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+    setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
     enableEvents(WindowEvent.WINDOW_CLOSING);
-//    closeButton.addActionListener(this);
-//    clearButton.addActionListener(this);
-        
-//    PrintStream c = new PrintStream(new ConsoleStream());
 
     setSize(400, 360);
     AwtUtil.centerWindow(this);
@@ -263,59 +255,15 @@ public class BudgetSettingsWindow
 	  txtEndDate.setEnabled(enable);
   }
 
-//  public static void addSubAccounts(Account parentAcct, StringBuffer acctStr) {
-//    int sz = parentAcct.getSubAccountCount();
-//    for(int i=0; i<sz; i++) {
-//      Account acct = parentAcct.getSubAccount(i);
-//      acctStr.append(acct.getFullAccountName());
-//      acctStr.append("\n");
-//      addSubAccounts(acct, acctStr);
-//    }
-//  }
-
-
-//  public void actionPerformed(ActionEvent evt) {
-//    Object src = evt.getSource();
-//    if(src==closeButton) {
-//      extension.closeConsole();
-//    }
-//    if(src==clearButton) {
-//      accountListArea.setText("");
-//    }
-//  }
-
-  public final void processEvent(AWTEvent evt) {
+  @Override
+public final void processEvent(AWTEvent evt) {
     if(evt.getID()==WindowEvent.WINDOW_CLOSING) {
       extension.closeConsole();
       return;
     }
-    if(evt.getID()==WindowEvent.WINDOW_OPENED) {
-    }
     super.processEvent(evt);
   }
   
-//  private class ConsoleStream
-//    extends OutputStream
-//    implements Runnable
-//  {    
-//    public void write(int b)
-//      throws IOException
-//    {
-//      accountListArea.append(String.valueOf((char)b));
-//      repaint();
-//    }
-//
-//    public void write(byte[] b)
-//      throws IOException
-//    {
-//      accountListArea.append(new String(b));
-//      repaint();
-//    }
-//    public void run() {
-//      accountListArea.repaint();
-//    }
-//  }
-
   void goAway() {
     setVisible(false);
     dispose();

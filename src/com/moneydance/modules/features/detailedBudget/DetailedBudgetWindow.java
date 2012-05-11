@@ -28,6 +28,7 @@ import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.WindowConstants;
 import javax.swing.border.EmptyBorder;
 import javax.swing.filechooser.FileFilter;
 
@@ -69,7 +70,7 @@ public class DetailedBudgetWindow extends JFrame {
 	private JButton closeButton;
 
 	/** Categories to show in report*/
-	private List categories = null;
+	private List<Account> categories = null;
 	
 	public static final DecimalFormat CURR_FMT = new DecimalFormat("#,##0");
 	public static final DecimalFormat CENTS_FMT = new DecimalFormat("00");
@@ -148,7 +149,7 @@ public class DetailedBudgetWindow extends JFrame {
 	    
 	    getContentPane().add(p);
 
-	    setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+	    setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
 	    enableEvents(WindowEvent.WINDOW_CLOSING);
 
 	    setSize(600, 500);
@@ -189,11 +190,11 @@ public class DetailedBudgetWindow extends JFrame {
 		// Body
 		
 		// Get Subtotal times
-		List columns = getDetailedBudgetColumns(startDate,endDate);
+		List<DetailedBudgetColumn> columns = getDetailedBudgetColumns(startDate,endDate);
 		
 		// Fill Actual and Budgeted Amounts for each column
-		for (Iterator iterator = columns.iterator(); iterator.hasNext();) {
-			DetailedBudgetColumn col = (DetailedBudgetColumn) iterator.next();
+		for (Iterator<DetailedBudgetColumn> iterator = columns.iterator(); iterator.hasNext();) {
+			DetailedBudgetColumn col = iterator.next();
 			
 			// Map of int (account number) to DetailedBudgetItem
 			col.detIncomeItems =  getDetailedBudgetItems(col.startDay, col.endDay, INCOME_ACCOUNTS);
@@ -207,19 +208,18 @@ public class DetailedBudgetWindow extends JFrame {
 		// First line of header
 		sb.append("<tr><td align=\"center\"><strong>Item</strong></td>");
 		if (columns.size() > 1) {
-			for (Iterator iterator = columns.iterator(); iterator.hasNext();) {
-				DetailedBudgetColumn col = (DetailedBudgetColumn) iterator.next();
+			for (Iterator<DetailedBudgetColumn> iterator = columns.iterator(); iterator.hasNext();) {
+				DetailedBudgetColumn col = iterator.next();
 				sb.append("<td align=\"center\" colspan="+numSubTotalCols+"><strong>"+DT_FMT.format(col.startDay)+
 						" - "+DT_FMT.format(col.endDay)+"</strong></td>");
 			}
 			int lastSpan = 3;
-//			if (subtotalsForParentCategories) lastSpan++;
 			sb.append("<td align=\"center\" colspan="+lastSpan+"><strong>TOTAL</strong></td>");
 			sb.append("</tr>\n");
 			// Second line of header
 			sb.append("<tr><td>&nbsp</td>\n");
 			if (columns.size() > 1) {
-				for (Iterator iterator = columns.iterator(); iterator.hasNext();) {
+				for (Iterator<DetailedBudgetColumn> iterator = columns.iterator(); iterator.hasNext();) {
 					/*DetailedBudgetColumn col = (DetailedBudgetColumn) */iterator.next();
 					if (budgetWithSubtotal || columns.size() == 1) {
 						sb.append("<td align=\"center\"><strong>Budget</strong></td>");
@@ -234,9 +234,6 @@ public class DetailedBudgetWindow extends JFrame {
 		
 		sb.append("<td align=\"center\"><strong>Budget</strong></td>");
 		sb.append("<td align=\"center\"><strong>Actual</strong></td>");
-//		if (subtotalsForParentCategories) {
-//			sb.append("<td align=\"center\"><strong>Actual</strong></td>");
-//		}
 		sb.append("<td align=\"center\"><strong>Diff</strong></td>");
 		sb.append("</tr>\n");
 
@@ -293,7 +290,7 @@ public class DetailedBudgetWindow extends JFrame {
 	 * @param columns
 	 * @return
 	 */
-	public int getNumTableColumns(List columns) {
+	public int getNumTableColumns(List<DetailedBudgetColumn> columns) {
 		int i = 4;
 		if (columns.size() > 1) {
 			i += getNumSubtotalsColumns() * columns.size();
@@ -304,26 +301,28 @@ public class DetailedBudgetWindow extends JFrame {
 	}
 
 	/** Categories HTML for Income or Expenses */
-	public String getCategoriesHTML(List columns, int type) {
+	public String getCategoriesHTML(List<DetailedBudgetColumn> columns, int type) {
 		StringBuffer sbo = new StringBuffer();
 		sbo.append("<tr><td colspan="+getNumTableColumns(columns)+"><strong>");
-		if (type == INCOME_ACCOUNTS) sbo.append("INCOME");
-		else if (type == EXPENSE_ACCOUNTS) sbo.append("EXPENSE");
+		if (type == INCOME_ACCOUNTS)
+			sbo.append("INCOME");
+		else if (type == EXPENSE_ACCOUNTS)
+			sbo.append("EXPENSE");
 		sbo.append("</strong></td></tr>");
 		
 		// Categories
 		Account lastParentAccount = null;
 		// Array of longs for subtotals
-		Map parentSubtotalMap = new HashMap();
-		Map lastParentSubtotalMap = new HashMap();
+		Map<Integer, Long> parentSubtotalMap = new HashMap<Integer, Long>();
+		Map<Integer, Long> lastParentSubtotalMap = new HashMap<Integer, Long>();
 		boolean lastParentHasValues = false;
-		for (Iterator iterator = categories.iterator(); iterator.hasNext();) {
+		for (Iterator<Account> iterator = categories.iterator(); iterator.hasNext();) {
 			int parentSubPtr = 0;
-			Account account = (Account) iterator.next();
+			Account account = iterator.next();
 			StringBuffer sb = new StringBuffer();
 			StringBuffer sbBefore = new StringBuffer();
-			//StringBuffer sbAfter = new StringBuffer();
-			if (account == null) continue;
+			if (account == null)
+				continue;
 			// Only accept income or expense accounts
 			if (type == INCOME_ACCOUNTS && !(account instanceof IncomeAccount)) continue;
 			else if (type == EXPENSE_ACCOUNTS && !(account instanceof ExpenseAccount)) continue;
@@ -337,7 +336,7 @@ public class DetailedBudgetWindow extends JFrame {
 				Account parentAccount = account.getPath()[0];
 				if (lastParentAccount != null && !lastParentAccount.equals(parentAccount) && lastParentHasValues) {
 					lastParentSubtotalMap = parentSubtotalMap;
-					parentSubtotalMap = new HashMap();
+					parentSubtotalMap = new HashMap<Integer, Long>();
 					lastParentHasValues = false;
 				}
 			}
@@ -351,11 +350,11 @@ public class DetailedBudgetWindow extends JFrame {
 			// Columns
 			long totalActual = 0;
 			long totalBudget = 0;
-			for (Iterator iterator2 = columns.iterator(); iterator2.hasNext();) {
-				DetailedBudgetColumn col = (DetailedBudgetColumn) iterator2.next();
+			for (Iterator<DetailedBudgetColumn> iterator2 = columns.iterator(); iterator2.hasNext();) {
+				DetailedBudgetColumn col = iterator2.next();
 				DetailedBudgetItem item = null;
-				if (type == INCOME_ACCOUNTS) item = (DetailedBudgetItem) col.detIncomeItems.get(accNum);
-				else if (type == EXPENSE_ACCOUNTS) item = (DetailedBudgetItem) col.detExpenseItems.get(accNum);
+				if (type == INCOME_ACCOUNTS) item = col.detIncomeItems.get(accNum);
+				else if (type == EXPENSE_ACCOUNTS) item = col.detExpenseItems.get(accNum);
 				long actual = 0;
 				long budget = 0;
 				if (item != null) {
@@ -371,9 +370,6 @@ public class DetailedBudgetWindow extends JFrame {
 				}
 				sb.append("<td align=\"right\">").append(getCurrencyStr(actual,col.endDay)).append("</td>");
 				addSubtotal(parentSubtotalMap,actual,parentSubPtr++);
-//				if (subtotalsForParentCategories && columns.size() == 1) {
-//					sb.append("<td align=\"right\">&nbsp;</td>");
-//				}
 				if (diffWithSubtotal || columns.size() == 1) {
 					long diff = budget - actual;
 					if (type == INCOME_ACCOUNTS) {
@@ -392,9 +388,6 @@ public class DetailedBudgetWindow extends JFrame {
 				addSubtotal(parentSubtotalMap,totalBudget,parentSubPtr++);
 				sb.append("<td align=\"right\">").append(getCurrencyStr(totalActual,null)).append("</td>");
 				addSubtotal(parentSubtotalMap,totalActual,parentSubPtr++);
-//				if (subtotalsForParentCategories) {
-//					sb.append("<td align=\"right\">&nbsp;</td>");
-//				}
 				long diff = totalBudget - totalActual;
 				if (type == INCOME_ACCOUNTS) {
 					diff = totalActual - totalBudget;
@@ -412,7 +405,6 @@ public class DetailedBudgetWindow extends JFrame {
 //					System.out.println("  parentAccount="+parentAccount.getAccountName()+" last="+lastParentAccount+" account="+account);
 					if (lastParentAccount == null || !lastParentAccount.equals(parentAccount)) {
 						// Add subtotal of previous parent account
-//						if (!account.equals(parentAccount)) {
 						if (lastParentAccount != null) {
 							addParentCategorySubtotalRow(sbBefore,lastParentSubtotalMap);
 //							System.out.println("  sbBefore1="+sbBefore.toString());
@@ -446,21 +438,21 @@ public class DetailedBudgetWindow extends JFrame {
 		return " style=\"padding-left:20px;\"";
 	}
 	
-	private void addSubtotal(Map subtotalMap, long value, int index) {
+	private void addSubtotal(Map<Integer, Long> subtotalMap, long value, int index) {
 		long val = 0;
 		if (subtotalMap.get(new Integer(index)) != null) {
-			val = ((Long)subtotalMap.get(new Integer(index))).longValue();
+			val = subtotalMap.get(new Integer(index)).longValue();
 		}
 		val += value;
 		subtotalMap.put(new Integer(index),new Long(val));
 	}
 	
 	/** Parent Category with Subtotals row for Parent Category */
-	private void addParentCategorySubtotalRow(StringBuffer sb, Map subtotalMap) {
+	private void addParentCategorySubtotalRow(StringBuffer sb, Map<Integer, Long> subtotalMap) {
 		sb.append("<tr><td><strong>Subtotal</strong></td>");
 
 		for (int i = 0; i < subtotalMap.size(); i++) {
-			long val = ((Long)subtotalMap.get(new Integer(i))).longValue();
+			long val = subtotalMap.get(new Integer(i)).longValue();
 			sb.append("<td align=\"right\"><strong>"+getCurrencyStr(val,null)+"</strong></td>");
 		}
 		
@@ -469,17 +461,17 @@ public class DetailedBudgetWindow extends JFrame {
 	}
 
 	/** Parent Category with Subtotals row for Parent Category */
-	private void addParentHeading(StringBuffer sb, Account account, List columns) {
+	private void addParentHeading(StringBuffer sb, Account account, List<DetailedBudgetColumn> columns) {
 		sb.append("<tr><td colspan="+getNumTableColumns(columns)+"><strong>"+getAccountName(account)+"</strong></td></tr>");
 	}
 	
 	/** Blank row */
-	private void addBlankRow(StringBuffer sb, List columns) {
+	private void addBlankRow(StringBuffer sb, List<DetailedBudgetColumn> columns) {
 		sb.append("<tr><td colspan="+getNumTableColumns(columns)+">&nbsp;</td></tr>");
 	}
 	
 	/** Categories HTML for TOTAL of Income or Expenses */
-	public String getCategoriesTotalHTML(List columns, int type) {
+	public String getCategoriesTotalHTML(List<DetailedBudgetColumn> columns, int type) {
 		StringBuffer sb = new StringBuffer();
 		// TOTALS
 		sb.append("<tr><td><strong>");
@@ -491,8 +483,8 @@ public class DetailedBudgetWindow extends JFrame {
 		// Columns
 		long totalActual = 0;
 		long totalBudget = 0;
-		for (Iterator iterator2 = columns.iterator(); iterator2.hasNext();) {
-			DetailedBudgetColumn col = (DetailedBudgetColumn) iterator2.next();
+		for (Iterator<DetailedBudgetColumn> iterator2 = columns.iterator(); iterator2.hasNext();) {
+			DetailedBudgetColumn col = iterator2.next();
 			long actual = 0;
 			long budget = 0;
 			if (type == INCOME_ACCOUNTS) {
@@ -512,9 +504,6 @@ public class DetailedBudgetWindow extends JFrame {
 				sb.append("<td align=\"right\"><strong>").append(getCurrencyStr(budget,null)).append("</strong></td>");
 			}
 			sb.append("<td align=\"right\"><strong>").append(getCurrencyStr(actual,col.endDay)).append("</strong></td>");
-//			if (subtotalsForParentCategories && columns.size() == 1) {
-//				sb.append("<td align=\"right\"><strong>").append(getCurrencyStr(actual,col.endDay)).append("</strong></td>");
-//			}
 			if (diffWithSubtotal || columns.size() == 1) {
 				sb.append("<td align=\"right\"><strong>").append(getCurrencyStr(budget - actual,col.endDay)).append("</strong></td>");
 			}
@@ -526,9 +515,6 @@ public class DetailedBudgetWindow extends JFrame {
 		if (columns.size() > 1) {
 			sb.append("<td align=\"right\"><strong>").append(getCurrencyStr(totalBudget,null)).append("</strong></td>");
 			sb.append("<td align=\"right\"><strong>").append(getCurrencyStr(totalActual,null)).append("</strong></td>");
-//			if (subtotalsForParentCategories) {
-//				sb.append("<td align=\"right\"><strong>").append(getCurrencyStr(totalActual,null)).append("</strong></td>");
-//			}
 			sb.append("<td align=\"right\"><strong>").append(getCurrencyStr(totalBudget - totalActual,null)).append("</strong></td>");
 		}
 		sb.append("</tr>\n");
@@ -543,8 +529,8 @@ public class DetailedBudgetWindow extends JFrame {
 	 * @param endDay End Day of Period
 	 * @return
 	 */
-	private List getDetailedBudgetColumns(Date startDay, Date endDay) {
-		List columns = new ArrayList();
+	private List<DetailedBudgetColumn> getDetailedBudgetColumns(Date startDay, Date endDay) {
+		List<DetailedBudgetColumn> columns = new ArrayList<DetailedBudgetColumn>();
 		
 		Date sd = startDay;
 
@@ -639,16 +625,16 @@ public class DetailedBudgetWindow extends JFrame {
 	 * @param type Either INCOME_ACCOUNTS(0) or EXPENSE_ACCOUNTS(1)
 	 * @return Map of int (account number) to DetailedBudgetItem
 	 */
-	private Map getDetailedBudgetItems(Date startDay, Date endDay, int type) {
+	private Map<Integer, DetailedBudgetItem> getDetailedBudgetItems(Date startDay, Date endDay, int type) {
 //		System.out.println("getDetailedBudgetItems type="+type);
-		Map txnMap = new HashMap();
+		Map<Integer, DetailedBudgetItem> txnMap = new HashMap<Integer, DetailedBudgetItem>();
 		
 		TransactionSet txSet = extension.getUnprotectedContext().getRootAccount().getTransactionSet();
 		
 		// Loop through all transactions
-		Enumeration e = txSet.getAllTransactions();
+		Enumeration<AbstractTxn> e = txSet.getAllTransactions();
 		for (; e.hasMoreElements(); ) {
-			AbstractTxn t = (AbstractTxn)e.nextElement();
+			AbstractTxn t = e.nextElement();
 			if (t == null) continue;
 //			System.out.println("..txn="+t.getAccount().getAccountName()+" => "+t.getAccount().getClass().getName());
 			// Only accept income or expense accounts
@@ -689,7 +675,7 @@ public class DetailedBudgetWindow extends JFrame {
 				if (budgetedAmount == 0) continue;
 				
 				Integer accNum = new Integer(a.getAccountNum());
-				DetailedBudgetItem item = (DetailedBudgetItem) txnMap.get(accNum);
+				DetailedBudgetItem item = txnMap.get(accNum);
 				if (item == null) {
 					item = new DetailedBudgetItem(accNum.intValue(),budgetedAmount,0);
 					txnMap.put(accNum,item);
@@ -716,50 +702,36 @@ public class DetailedBudgetWindow extends JFrame {
 		public int days;
 		public boolean prorate;
 		
+		@Override
 		public String toString()
 		{
 			return "" + years + ", " + months + ", " + days + ", " + prorate;
 		}
-	};
+	}
 	
-	static private Map intervalMap = null;
+	static private Map<Integer, IntervalInfo> intervalMap = null;
 	
 	static private void buildIntervalMap() 
 	{
-		intervalMap = new HashMap();
+		intervalMap = new HashMap<Integer, IntervalInfo>();
 		
-		intervalMap.put(new Integer(BudgetItem.INTERVAL_ANNUALLY),           
-						new IntervalInfo(1, 0, 0, true));
-		intervalMap.put(new Integer(BudgetItem.INTERVAL_ONCE_ANNUALLY),
-						new IntervalInfo(1, 0, 0, false));
-		intervalMap.put(new Integer(BudgetItem.INTERVAL_SEMI_ANNUALLY),
-						new IntervalInfo(0, 6, 0, true));
-		intervalMap.put(new Integer(BudgetItem.INTERVAL_ONCE_SEMI_ANNUALLY),
-						new IntervalInfo(0, 6, 0, false));
-		intervalMap.put(new Integer(BudgetItem.INTERVAL_TRI_MONTHLY),
-						new IntervalInfo(0, 3, 0, true));
-		intervalMap.put(new Integer(BudgetItem.INTERVAL_ONCE_TRI_MONTHLY),
-						new IntervalInfo(0, 3, 0, false));
-		intervalMap.put(new Integer(BudgetItem.INTERVAL_MONTHLY),
-						new IntervalInfo(0, 1, 0, true));
-		intervalMap.put(new Integer(BudgetItem.INTERVAL_ONCE_MONTHLY),
-						new IntervalInfo(0, 1, 0, false));
-		intervalMap.put(new Integer(BudgetItem.INTERVAL_SEMI_MONTHLY),
-						new IntervalInfo(0, 1, 0, true));
-		intervalMap.put(new Integer(BudgetItem.INTERVAL_ONCE_SEMI_MONTHLY),
-						new IntervalInfo(0, 1, 0, false));
-		intervalMap.put(new Integer(BudgetItem.INTERVAL_TRI_WEEKLY),
-						new IntervalInfo(0, 0, 21, true));
-		intervalMap.put(new Integer(BudgetItem.INTERVAL_ONCE_TRI_WEEKLY),
-						new IntervalInfo(0, 0, 21, true));
-		intervalMap.put(new Integer(BudgetItem.INTERVAL_BI_WEEKLY),
-						new IntervalInfo(0, 0, 14, true));
-		intervalMap.put(new Integer(BudgetItem.INTERVAL_ONCE_BI_WEEKLY),
-						new IntervalInfo(0, 0, 14, true));
-		intervalMap.put(new Integer(BudgetItem.INTERVAL_WEEKLY),
-						new IntervalInfo(0, 0, 7, true));
-		intervalMap.put(new Integer(BudgetItem.INTERVAL_ONCE_WEEKLY),
-						new IntervalInfo(0, 0, 7, false));
+		intervalMap.put(BudgetItem.INTERVAL_NO_REPEAT, new IntervalInfo(3000, 0, 0, false));
+		intervalMap.put(BudgetItem.INTERVAL_ANNUALLY, new IntervalInfo(1, 0, 0, true));
+		intervalMap.put(BudgetItem.INTERVAL_ONCE_ANNUALLY, new IntervalInfo(1, 0, 0, false));
+		intervalMap.put(BudgetItem.INTERVAL_SEMI_ANNUALLY, new IntervalInfo(0, 6, 0, true));
+		intervalMap.put(BudgetItem.INTERVAL_ONCE_SEMI_ANNUALLY, new IntervalInfo(0, 6, 0, false));
+		intervalMap.put(BudgetItem.INTERVAL_TRI_MONTHLY, new IntervalInfo(0, 3, 0, true));
+		intervalMap.put(BudgetItem.INTERVAL_ONCE_TRI_MONTHLY, new IntervalInfo(0, 3, 0, false));
+		intervalMap.put(BudgetItem.INTERVAL_MONTHLY, new IntervalInfo(0, 1, 0, true));
+		intervalMap.put(BudgetItem.INTERVAL_ONCE_MONTHLY, new IntervalInfo(0, 1, 0, false));
+		intervalMap.put(BudgetItem.INTERVAL_SEMI_MONTHLY, new IntervalInfo(0, 1, 0, true));
+		intervalMap.put(BudgetItem.INTERVAL_ONCE_SEMI_MONTHLY, new IntervalInfo(0, 1, 0, false));
+		intervalMap.put(BudgetItem.INTERVAL_TRI_WEEKLY, new IntervalInfo(0, 0, 21, true));
+		intervalMap.put(BudgetItem.INTERVAL_ONCE_TRI_WEEKLY, new IntervalInfo(0, 0, 21, true));
+		intervalMap.put(BudgetItem.INTERVAL_BI_WEEKLY, new IntervalInfo(0, 0, 14, true));
+		intervalMap.put(BudgetItem.INTERVAL_ONCE_BI_WEEKLY, new IntervalInfo(0, 0, 14, true));
+		intervalMap.put(BudgetItem.INTERVAL_WEEKLY, new IntervalInfo(0, 0, 7, true));
+		intervalMap.put(BudgetItem.INTERVAL_ONCE_WEEKLY, new IntervalInfo(0, 0, 7, false));
 	}
 
 	/**
@@ -798,7 +770,7 @@ public class DetailedBudgetWindow extends JFrame {
 			return intervalAmount * (Util.calculateDaysBetween(perStart, perEnd));
 		}
 		
-		IntervalInfo i = (IntervalInfo) intervalMap.get(new Integer(interval));
+		IntervalInfo i = intervalMap.get(new Integer(interval));
 		
 		long amount = 0;
 		while (perEnd < repEnd) 
@@ -871,7 +843,7 @@ public class DetailedBudgetWindow extends JFrame {
 	 * @param txnMap
 	 * @param t
 	 */
-	private void addTransaction(Map txnMap, AbstractTxn t) {
+	private void addTransaction(Map<Integer, DetailedBudgetItem> txnMap, AbstractTxn t) {
 		if (t == null) return;
 
 		// Get txn account
@@ -880,7 +852,7 @@ public class DetailedBudgetWindow extends JFrame {
 		if (t.getAccount() instanceof IncomeAccount) amount = -amount;
 		// Get current actual amount
 		Integer accNum = new Integer(a.getAccountNum());
-		DetailedBudgetItem item = (DetailedBudgetItem) txnMap.get(accNum);
+		DetailedBudgetItem item = txnMap.get(accNum);
 		if (item == null) {
 			item = new DetailedBudgetItem(accNum.intValue(),0,amount);
 			txnMap.put(accNum,item);
@@ -891,8 +863,8 @@ public class DetailedBudgetWindow extends JFrame {
 
 	/** Get all categories (A category is actually an Account object) based on 
 	 * Budget selected */
-	private List getCategories() {
-		List categories = new ArrayList();
+	private List<Account> getCategories() {
+		List<Account> categoryList = new ArrayList<Account>();
 		
 		// Do we get all the categories?
 		if (!budgetName.equals("ALL")) {
@@ -908,56 +880,55 @@ public class DetailedBudgetWindow extends JFrame {
 				for (int j = 0; j < b.getItemCount(); j++) {
 					BudgetItem bi = b.getItem(j);
 					Account a = bi.getTransferAccount();
-					addAccountAndSubaccounts(categories,a);
+					addAccountAndSubaccounts(categoryList,a);
 				}
 				
-				sortCategories(categories);
-				return categories;
+				sortCategories(categoryList);
+				return categoryList;
 			}
 
 		}
 		// Get all categories
 		try {
-			Enumeration sa = extension.getUnprotectedContext().getRootAccount().getSubAccounts();
+			@SuppressWarnings("unchecked")
+			Enumeration<Account> sa = extension.getUnprotectedContext().getRootAccount().getSubAccounts();
 			for (; sa.hasMoreElements(); ) {
-				Account a = (Account)sa.nextElement();
-				addAccountAndSubaccounts(categories,a);
+				Account a = sa.nextElement();
+				addAccountAndSubaccounts(categoryList,a);
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		
-		sortCategories(categories);
-		return categories;
+		sortCategories(categoryList);
+		return categoryList;
 	}
 	
-	private void sortCategories(List categories) {
-		Collections.sort(categories,new Comparator() {
-			public int compare(Object arg0, Object arg1) {
-				Account a0 = (Account) arg0;
-				Account a1 = (Account) arg1;
-				return getFullAccountName(a0).compareTo(getFullAccountName(a1));
+	private void sortCategories(List<Account> categoryList) {
+		Collections.sort(categoryList,new Comparator<Account>() {
+			public int compare(Account arg0, Account arg1) {
+				return getFullAccountName(arg0).compareTo(getFullAccountName(arg1));
 			}
 		});
 
 	}
 
 	/** Add an account to the list if it isnt there already */
-	private void addAccountAndSubaccounts(List categories, Account account) {
+	private void addAccountAndSubaccounts(List<Account> categoryList, Account account) {
 		if (account == null) return;
 		if (!(account instanceof ExpenseAccount) && 
 			!(account instanceof IncomeAccount)) return;
 		
 		// If not in list, add it
-		if (!categories.contains(account)) {
-			categories.add(account);
+		if (!categoryList.contains(account)) {
+			categoryList.add(account);
 		}
 		
-		Enumeration ssa = account.getSubAccounts();
+		@SuppressWarnings("unchecked") Enumeration<Account> ssa = account.getSubAccounts();
 		for (; ssa.hasMoreElements(); ) {
-			Account suba = (Account)ssa.nextElement();
+			Account suba = ssa.nextElement();
 			if (suba == null) continue;
-			addAccountAndSubaccounts(categories, suba);
+			addAccountAndSubaccounts(categoryList, suba);
 		}
 		
 	}
@@ -969,10 +940,12 @@ public class DetailedBudgetWindow extends JFrame {
 		File defFile = new File(getBudgetPeriodStr()+".html");
 		fc.setSelectedFile(defFile);
 		fc.setFileFilter(new FileFilter() {
+			@Override
 			public String getDescription() {
 				return "HTML Files";
 			}
 		
+			@Override
 			public boolean accept(File f) {
 				if (f.getName().toLowerCase().endsWith("html")) return true;
 				return false;
@@ -990,6 +963,7 @@ public class DetailedBudgetWindow extends JFrame {
                 out.write(txtReport.getText());
                 out.close();
             } catch (IOException e) {
+            	// TODO(divegeek) Figure out what's appropriate here.
             }
         }
 	}
@@ -1024,9 +998,9 @@ public class DetailedBudgetWindow extends JFrame {
 		Date startDay = null;
 		Date endDay = null;
 		// Map of account (int) to DetailedBudgetItem for income accounts
-		Map detIncomeItems = null;
+		Map<Integer, DetailedBudgetItem> detIncomeItems = null;
 		// Map of account (int) to DetailedBudgetItem for expense accounts
-		Map detExpenseItems = null;
+		Map<Integer, DetailedBudgetItem> detExpenseItems = null;
 		
 		public DetailedBudgetColumn(Date startDay, Date endDay) {
 			this.startDay = startDay;
@@ -1036,11 +1010,11 @@ public class DetailedBudgetWindow extends JFrame {
 		/** Total Budget amount for Income Accounts */
 		public long getTotalIncomeBudgetAmount() {
 			long total = 0;
-			for (Iterator iterator = categories.iterator(); iterator.hasNext();) {
-				Account account = (Account) iterator.next();
+			for (Iterator<Account> iterator = categories.iterator(); iterator.hasNext();) {
+				Account account = iterator.next();
 				Integer accNum = new Integer(account.getAccountNum());
 
-				DetailedBudgetItem item = (DetailedBudgetItem)detIncomeItems.get(accNum);
+				DetailedBudgetItem item = detIncomeItems.get(accNum);
 				if (item != null) total += item.budgetAmount;
 			}
 			return total;
@@ -1049,11 +1023,11 @@ public class DetailedBudgetWindow extends JFrame {
 		/** Total Actual amount for Income Accounts */
 		public long getTotalIncomeActualAmount() {
 			long total = 0;
-			for (Iterator iterator = categories.iterator(); iterator.hasNext();) {
-				Account account = (Account) iterator.next();
+			for (Iterator<Account> iterator = categories.iterator(); iterator.hasNext();) {
+				Account account = iterator.next();
 				Integer accNum = new Integer(account.getAccountNum());
 
-				DetailedBudgetItem item = (DetailedBudgetItem)detIncomeItems.get(accNum);
+				DetailedBudgetItem item = detIncomeItems.get(accNum);
 				if (item != null) total += item.actualAmount;
 			}
 			return total;
@@ -1062,11 +1036,11 @@ public class DetailedBudgetWindow extends JFrame {
 		/** Total Budget amount for Expense Accounts */
 		public long getTotalExpenseBudgetAmount() {
 			long total = 0;
-			for (Iterator iterator = categories.iterator(); iterator.hasNext();) {
-				Account account = (Account) iterator.next();
+			for (Iterator<Account> iterator = categories.iterator(); iterator.hasNext();) {
+				Account account = iterator.next();
 				Integer accNum = new Integer(account.getAccountNum());
 
-				DetailedBudgetItem item = (DetailedBudgetItem)detExpenseItems.get(accNum);
+				DetailedBudgetItem item = detExpenseItems.get(accNum);
 				if (item != null) total += item.budgetAmount;
 			}
 			return total;
@@ -1075,11 +1049,11 @@ public class DetailedBudgetWindow extends JFrame {
 		/** Total Actual amount for Expense Accounts */
 		public long getTotalExpenseActualAmount() {
 			long total = 0;
-			for (Iterator iterator = categories.iterator(); iterator.hasNext();) {
-				Account account = (Account) iterator.next();
+			for (Iterator<Account> iterator = categories.iterator(); iterator.hasNext();) {
+				Account account = iterator.next();
 				Integer accNum = new Integer(account.getAccountNum());
 
-				DetailedBudgetItem item = (DetailedBudgetItem)detExpenseItems.get(accNum);
+				DetailedBudgetItem item = detExpenseItems.get(accNum);
 				if (item != null) total += item.actualAmount;
 			}
 			return total;
