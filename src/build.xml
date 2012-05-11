@@ -7,9 +7,13 @@ http://jakarta.apache.org/ant/index.html
   <property name="version"  value="2.2"/>
   <property name="src" value="."/>
   <property name="build" value="./build"/>
+<!--
   <property name="privkeyfile" value="${src}/priv_key"/>
   <property name="pubkeyfile" value="${src}/pub_key"/>
   <property name="privkeyid" value="99"/>
+-->
+
+  <property file="./user.properties" />
 
   <property name="build.compiler"  value="classic"/>
   <property name="build.compiler.fulldepend"  value="true"/>
@@ -42,7 +46,7 @@ http://jakarta.apache.org/ant/index.html
       <fileset dir="${build}" includes="com/moneydance/modules/features/detailedBudget/**"/>
     </jar>
 
-<!--    <java newenvironment="true" 
+    <java newenvironment="true" 
       classpathref="classpath"
       classname="com.moneydance.admin.KeyAdmin">
       <arg value="signextjar"/>
@@ -51,7 +55,7 @@ http://jakarta.apache.org/ant/index.html
       <arg value="detailedBudget"/>
       <arg line="${dist}/detailedBudget.mxt"/>
     </java>
-    <move file="${src}/s-detailedBudget.mxt" tofile="${dist}/detailedBudget.mxt"/> -->
+    <move file="${src}/s-detailedBudget.mxt" tofile="${dist}/detailedBudget.mxt"/> 
   </target>
 
   <target name="genkeys">
